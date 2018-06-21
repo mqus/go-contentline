@@ -18,22 +18,18 @@ type Parser struct {
 }
 
 func (p *Parser) readUnfoldedLine() (string, error) {
-	buf, e := p.r.ReadBytes('\r')
+	buf, e := p.r.ReadBytes('\n')
 	if e != nil {
 		return "", e
 	}
 
-	b, err := p.r.ReadByte()
-	if err != nil {
-		return "", err
-	}
-	if b != '\n' {
-		return "", errors.New("Expected CRLF:" + string(buf))
+	if buf[len(buf)-2] != '\r' {
+		return "", errors.Errorf("Expected CRLF:%s, >%v<", buf, buf[len(buf)-2:])
 	}
 	b1, err2 := p.r.Peek(1)
 
 	if err2 != nil {
-		return string(buf[:len(buf)-1]), err2
+		return string(buf[:len(buf)-2]), err2
 	}
 	if bytes.Equal(b1, []byte(" ")) {
 		p.r.ReadByte()
@@ -41,9 +37,9 @@ func (p *Parser) readUnfoldedLine() (string, error) {
 		if s == "" {
 			return "", e
 		}
-		return string(buf[:len(buf)-1]) + s, e
+		return string(buf[:len(buf)-2]) + s, e
 	}
-	return string(buf[:len(buf)-1]), nil
+	return string(buf[:len(buf)-2]), nil
 }
 
 func InitParser(reader io.Reader) *Parser {
@@ -61,11 +57,13 @@ func (p *Parser) getNextItem() (*item, error) {
 	i := p.l.nextItem()
 	switch i.typ {
 	case itemError:
-		e := errorf(p.l, &i, "")
+		e := errorf(p.l.input, &i, "")
 		p.l = nil
 		return nil, e
-
-	case itemCompName, itemPropValue: //the last items of a line
+	case itemCompName:
+		i.val = strings.ToUpper(i.val)
+		fallthrough
+	case itemPropValue: //the last items of a line
 		p.l = nil
 	case itemId: // make it easier for string matching
 		i.val = strings.ToUpper(i.val)
@@ -83,7 +81,7 @@ func (p *Parser) ParseComponent() (component *Component, err error) {
 		return nil, err
 	}
 	if i.typ != itemBegin {
-		return nil, errorf(p.l, i, "Expected 'BEGIN'")
+		return nil, errorf(p.l.input, i, "Expected 'BEGIN'")
 	}
 
 	return p.parseComponent()
@@ -125,12 +123,13 @@ func (p *Parser) parseComponent() (*Component, error) {
 			out.Comps = append(out.Comps, c)
 		}
 	}
+	line := p.l.input
 	namei, err := p.getNextItem()
 	if err != nil {
 		return nil, err
 	}
 	if namei.val != out.Name {
-		return nil, errorf(p.l, namei, "expected "+out.Name)
+		return nil, errorf(line, namei, "expected "+out.Name)
 	}
 	return out, nil
 }
@@ -144,10 +143,7 @@ func (p *Parser) parseProperty(name string) (*Property, error) {
 
 	currentParam := ""
 	i, e := p.getNextItem()
-	for ; i.typ != itemPropValue; i, e = p.getNextItem() {
-		if e != nil {
-			return nil, e
-		}
+	for ; e == nil && i.typ != itemPropValue; i, e = p.getNextItem() {
 		switch i.typ {
 		case itemId:
 			currentParam = i.val
@@ -155,11 +151,17 @@ func (p *Parser) parseProperty(name string) (*Property, error) {
 			out.Parameters[currentParam] = append(out.Parameters[currentParam], i.val)
 		}
 	}
+	if e != nil {
+		return nil, e
+	}
 	out.Value = i.val
 	return out, nil
 }
 
-func errorf(l *lexer, i *item, msg string) error {
+const radius = 20
+
+func errorf(line string, i *item, msg string) error {
+
 	prefix := ""
 	suffix := ""
 
@@ -170,17 +172,23 @@ func errorf(l *lexer, i *item, msg string) error {
 		pos2 = pos1 + 1
 	}
 
-	if pos1 > 10 {
-		prefix = "..." + l.input[pos1-10:pos1]
+	if pos1 > radius {
+		prefix = "..." + line[pos1-radius:pos1]
 	} else {
-		prefix = l.input[0:pos1]
+		prefix = line[0:pos1]
 	}
 
-	if len(l.input) > 10+int(pos2) {
-		suffix = l.input[pos1:pos2+10] + "..."
-	} else {
-		suffix = l.input[pos2:]
+	if len(line) > radius+int(pos2) {
+		suffix = line[pos1:pos2+radius] + "..."
+	} else if int(pos1) < len(line) {
+		suffix = line[pos1:]
 	}
 
+	if len(suffix) == 0 {
+		return errors.Errorf("%s: \t%s<HERE>\n", msg, prefix)
+	}
+	if len(suffix) == 1 {
+		return errors.Errorf("%s: \t%s >%s<\n", msg, prefix, suffix[:pos2-pos1])
+	}
 	return errors.Errorf("%s: \t%s >%s< %s\n", msg, prefix, suffix[:pos2-pos1], suffix[pos2-pos1:])
 }

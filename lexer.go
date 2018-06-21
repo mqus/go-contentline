@@ -2,6 +2,7 @@ package go_contentline
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"unicode/utf8"
 )
@@ -195,6 +196,7 @@ func lex(line int, input string) *lexer {
 // run runs the state machine for the lexer.
 func (l *lexer) run() {
 	for state := lexPropName; state != nil; {
+		log.Printf("Da:%v\n", state)
 		state = state(l)
 	}
 	close(l.items)
@@ -206,7 +208,7 @@ func (l *lexer) run() {
 func lexPropName(l *lexer) stateFn {
 	l.acceptRun(parName)
 	if l.pos == l.start {
-		return l.errorf("name must not be empty")
+		return l.errorf("expected one or more alphanumerical characters or '-'")
 	}
 	if strings.ToUpper(l.input[l.start:l.pos]) == sBEGIN {
 		l.emit(itemBegin)
@@ -230,11 +232,11 @@ func lexBeforeCompName(l *lexer) stateFn {
 
 func lexCompName(l *lexer) stateFn {
 	if l.peek() == eof {
-		return l.errorf("property value can't have length 0")
+		return l.errorf("component name can't have length 0")
 	}
 	l.acceptRunUnless("")
 	if l.peek() != eof {
-		return l.errorf("unexpected character")
+		return l.errorf("unexpected character, expected eol")
 	}
 	l.emit(itemCompName)
 	return nil
@@ -310,7 +312,7 @@ func lexValue(l *lexer) stateFn {
 	}
 	l.acceptRunUnless("")
 	if l.peek() != eof {
-		return l.errorf("unexpected character")
+		return l.errorf("unexpected character, expected eol")
 	}
 	l.emit(itemPropValue)
 	return nil

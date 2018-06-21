@@ -8,11 +8,11 @@ It will be compliant to RFC 6350 (vCard) ,5545 (iCal) and 6868 (Encoding extensi
 This is currently a WIP.
 
 ### TODO:
-- [ ]complete migration
+- [x]complete migration
 - [ ]restructure source code
 - [ ]CI
   - [ ]Tests
 - [ ]Complete Documentation
-- [ ]implement encoder
+- [x]implement encoder
 
 - [ ]release
