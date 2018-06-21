@@ -1,12 +1,13 @@
 package go_contentline
 
 import (
-	"github.com/pkg/errors"
-
+	"io"
+	"fmt"
 	"strings"
-
-	"github.com/soh335/icalparser"
+	"unicode/utf8"
 )
+
+const maxLineLength = 75
 
 type Component struct {
 	Name       string
@@ -14,100 +15,76 @@ type Component struct {
 	Properties []*Property
 }
 
-func ToIntermediate(obj *icalparser.Object) (out *Component, err error) {
-	out = &Component{}
-	out.Name = obj.HeaderLine.Value.C
-	out.Properties = toProps(obj.PropertiyLines)
-	for _, comp := range obj.Components {
-		x, e := toIntermediate(comp)
-		if e != nil {
-			return nil, e
-		}
-		out.Comps = append(out.Comps, x)
-	}
-	return
-}
-
-func toIntermediate(comp *icalparser.Component) (out *Component, err error) {
-	out = &Component{}
-	out.Name = comp.HeaderLine.Value.C
-	props := comp.PropertiyLines
-	for i := 0; i < len(props); i++ {
-		if props[i].Name.C == "BEGIN" {
-			newcomp := &Component{}
-			newcomp.Name = props[i].Value.C
-			x, e := parseComponent(props[i+1:], newcomp)
-			if e != nil {
-				return nil, e
-			}
-			i = i + x
-			out.Comps = append(out.Comps, newcomp)
-		} else {
-			out.Properties = append(out.Properties, toProp(props[i]))
-		}
-	}
-	return
-}
-
-func parseComponent(props []*icalparser.ContentLine, comp *Component) (lines int, err error) {
-
-	for i := 0; i < len(props); i++ {
-		if props[i].Name.C == "BEGIN" {
-			newcomp := &Component{}
-			newcomp.Name = props[i].Value.C
-			x, e := parseComponent(props[i+1:], newcomp)
-			if e != nil {
-				return 0, e
-			}
-			i = i + x
-			comp.Comps = append(comp.Comps, newcomp)
-		} else if props[i].Name.C == "END" {
-			if props[i].Value.C != comp.Name {
-				return 0, errors.New("Unexpected END:" + props[i].Value.C + " , expected END:" + comp.Name)
-			} else {
-				return i + 1, nil
-			}
-		} else { //Name = END
-			comp.Properties = append(comp.Properties, toProp(props[i]))
-		}
-	}
-	return 0, errors.New("Expected END:" + comp.Name + " , found nothing")
-}
 
 type Property struct {
 	Name  string
 	Value string
 	Parameters
-	old  *icalparser.ContentLine
 	olds string
 }
 type Parameters map[string][]string
 
-func toProp(line *icalparser.ContentLine) *Property {
-	out := &Property{
-		Name:       strings.ToLower(line.Name.C),
-		Value:      line.Value.C,
-		Parameters: make(map[string][]string),
-	}
-	for _, param := range line.Param {
-		for _, val := range param.ParamValues {
-			parName := strings.ToLower(param.ParamName.C)
-			out.Parameters[parName] = append(out.Parameters[parName], val.C)
-		}
-	}
-
-	return out
-}
-
-func toProps(lines []*icalparser.ContentLine) (out []*Property) {
-	out = make([]*Property, len(lines))
-	for i, line := range lines {
-		out[i] = toProp(line)
-	}
-	return
-}
 
 func (Prop *Property) BeforeParsing() string {
 	//old must be the read string representation of this Property ("ContentLine")
 	return Prop.olds
 }
+
+func (c *Component) EncodeICal(w io.Writer){
+	fmt.Fprintf(w,"%s:%s\r\n",sBEGIN,strings.ToUpper(c.Name))
+	for _,p :=range c.Properties{
+		p.EncodeICal(w)
+	}
+	for _,c :=range c.Comps{
+		c.EncodeICal(w)
+	}
+
+	fmt.Fprintf(w,"%s:%s\r\n",sEND,strings.ToUpper(c.Name))
+}
+
+func (p *Property) EncodeICal(w io.Writer){
+	out:=strings.ToUpper(p.Name)
+	for k,vals:=range p.Parameters{
+		out := out + ";" + strings.ToUpper(k) + "="
+		for i,v:=range vals{
+			if i>0{
+				out = out+","
+			}
+			val:=EscapeParamVal(v)
+			if strings.ContainsAny(val,",;:"){
+				val = "\"" +val+"\""
+			}
+			out =out+val
+		}
+	}
+	out = out+":"+p.Value
+	parts:=split(out,maxLineLength)
+	for i,part:=range parts{
+		if i>0{
+			fmt.Fprint(w," ")
+		}
+		fmt.Fprint(w,part)
+		fmt.Fprint(w,"\r\n")
+	}
+}
+
+func split(in string,maxlen int)(out []string){
+	if len(in)<=maxlen{
+		return []string{in}
+	}
+	inr:=[]rune(in)
+	out = nil
+	prev:=0
+	sum:=0
+	for _,r:=range inr{
+		rl:=utf8.RuneLen(r)
+		if sum+rl-prev>maxlen{
+			out = append(out,in[prev:sum])
+			prev=sum
+		}
+		sum = sum+rl
+	}
+	return
+}
+
+

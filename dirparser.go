@@ -46,8 +46,8 @@ func (p *Parser) readUnfoldedLine() (string, error) {
 	return string(buf[:len(buf)-1]), nil
 }
 
-func InitParser(reader io.Reader) Parser {
-	return Parser{bufio.NewReader(reader), 0, nil}
+func InitParser(reader io.Reader) *Parser {
+	return &Parser{bufio.NewReader(reader), 0, nil}
 }
 
 func (p *Parser) getNextItem() (*item, error) {
