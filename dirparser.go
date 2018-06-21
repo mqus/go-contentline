@@ -74,16 +74,28 @@ func (p *Parser) getNextItem() (*item, error) {
 
 }
 
-func (p *Parser) ParseComponent() (component *Component, err error) {
+func (p *Parser) ParseNextObject() (component *Component, err error) {
+	c, e := p.parseObject()
+	switch e {
+	case nil:
+		return c, nil
+	case io.EOF:
+		return nil, io.EOF
+	default:
+		return nil, errors.Wrap(e, "error while parsing component(s)")
+	}
+}
+func (p *Parser) parseObject() (component *Component, err error) {
 	var i *item
+	//checks if the first thing to read is the start of a component
 	i, err = p.getNextItem()
 	if err != nil {
 		return nil, err
 	}
 	if i.typ != itemBegin {
-		return nil, errorf(p.l.input, i, "Expected 'BEGIN'")
+		return nil, errorf(p.l.input, i, "Expected '"+sBEGIN+"'")
 	}
-
+	//if true, start recursively parsing components and properties
 	return p.parseComponent()
 }
 
@@ -101,10 +113,7 @@ func (p *Parser) parseComponent() (*Component, error) {
 	}
 
 	i, e := p.getNextItem()
-	for ; i.typ != itemEnd; i, e = p.getNextItem() {
-		if e != nil {
-			return nil, e
-		}
+	for ; e == nil && i.typ != itemEnd; i, e = p.getNextItem() {
 		switch i.typ {
 		case itemId:
 			p, e := p.parseProperty(i.val)
@@ -122,6 +131,9 @@ func (p *Parser) parseComponent() (*Component, error) {
 
 			out.Comps = append(out.Comps, c)
 		}
+	}
+	if e != nil {
+		return nil, e
 	}
 	line := p.l.input
 	namei, err := p.getNextItem()

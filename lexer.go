@@ -2,7 +2,6 @@ package go_contentline
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"unicode/utf8"
 )
@@ -196,7 +195,6 @@ func lex(line int, input string) *lexer {
 // run runs the state machine for the lexer.
 func (l *lexer) run() {
 	for state := lexPropName; state != nil; {
-		log.Printf("Da:%v\n", state)
 		state = state(l)
 	}
 	close(l.items)
@@ -234,9 +232,9 @@ func lexCompName(l *lexer) stateFn {
 	if l.peek() == eof {
 		return l.errorf("component name can't have length 0")
 	}
-	l.acceptRunUnless("")
+	l.acceptRun(parName)
 	if l.peek() != eof {
-		return l.errorf("unexpected character, expected eol")
+		return l.errorf("unexpected character, expected eol, alphanumeric or '-'")
 	}
 	l.emit(itemCompName)
 	return nil
