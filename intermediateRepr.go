@@ -1,4 +1,4 @@
-package im
+package go_contentline
 
 import (
 	"github.com/pkg/errors"
