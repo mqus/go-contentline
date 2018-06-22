@@ -31,7 +31,7 @@ func (p *Parser) readUnfoldedLine() (string, error) {
 	if err2 != nil {
 		return string(buf[:len(buf)-2]), err2
 	}
-	if bytes.Equal(b1, []byte(" ")) {
+	if bytes.Equal(b1, []byte(" ")) || bytes.Equal(b1, []byte("\t")) {
 		p.r.ReadByte()
 		s, e := p.readUnfoldedLine()
 		if s == "" {
