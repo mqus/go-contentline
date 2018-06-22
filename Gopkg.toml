@@ -24,7 +24,7 @@
 #   go-tests = true
 #   unused-packages = true
 
-required = ["github.com/pkg/errors"]
+# required = ["github.com/pkg/errors"]
 
 [prune]
   go-tests = true

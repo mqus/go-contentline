@@ -26,7 +26,7 @@ func InitParser(reader io.Reader) *Parser {
 //ParseNextObject parses the next Component and returns it. If the Parser encounters an EOF prematurely,
 // it returns 'nil, io.EOF'. For all other errors, a wrapped error is returned.
 func (p *Parser) ParseNextObject() (component *Component, err error) {
-	c, e := p.ParseObject()
+	c, e := p.parseObject()
 	switch e {
 	case nil:
 		return c, nil

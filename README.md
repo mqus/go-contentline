@@ -9,9 +9,9 @@ This is currently a WIP.
 
 ### TODO:
 - [x] complete migration
-- [ ] restructure source code
-- [ ] CI
-  - [ ] Tests
+- [x] restructure source code
+- [x] CI
+- [ ] Tests
 - [ ] Complete Documentation
 - [x] implement encoder
 
