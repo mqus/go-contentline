@@ -76,6 +76,15 @@ func TestParser_ParseNextObject(t *testing.T) {
 			"END:InNeRcOmP\r\n"+
 			"END:Comp\r\n",
 		&Component{"COMP", nil, []*Component{{"INNERCOMP", []*Property{{"FEATURE", "LoremIpsum", map[string][]string{"LANG": {"e;n"}}, "FEATURE;LAng=\"e;n\":LoremIpsum"}}, nil}}})
+	//check property next to nested Component
+	parseCompare(t,
+		"BEGIN:comp\r\n"+
+			"FEATURE;LAng=\"e;n\":LoremIpsum\r\n"+
+			"BEGIN:iNnErCoMp\r\n"+
+			"END:InNeRcOmP\r\n"+
+			"FEATURE;LAng2=\"e;n\":LoremIpsum\r\n"+
+			"END:Comp\r\n",
+		&Component{"COMP", []*Property{{"FEATURE", "LoremIpsum", map[string][]string{"LANG": {"e;n"}}, "FEATURE;LAng=\"e;n\":LoremIpsum"}, {"FEATURE", "LoremIpsum", map[string][]string{"LANG2": {"e;n"}}, "FEATURE;LAng2=\"e;n\":LoremIpsum"}}, []*Component{{"INNERCOMP", nil, nil}}})
 
 }
 

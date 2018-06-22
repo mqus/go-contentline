@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/pkg/errors"
 )
@@ -131,29 +130,4 @@ func writeFolded(w io.Writer, s string) {
 		fmt.Fprint(w, part)
 		fmt.Fprint(w, "\r\n")
 	}
-}
-
-//split the input string in parts which are at most maxlen bytes long, while preserving utf8-runes
-func split(in string, maxlen int) (out []string) {
-	if len(in) <= maxlen {
-		return []string{in}
-	}
-	inr := []rune(in)
-	out = nil
-	prev := 0
-	sum := 0
-	for _, r := range inr {
-		rl := utf8.RuneLen(r)
-		if sum+rl-prev > maxlen {
-			//decrease maxlen for the space which will be added in writeFolded
-			if prev == 0 {
-				maxlen--
-			}
-			out = append(out, in[prev:sum])
-			prev = sum
-		}
-		sum = sum + rl
-	}
-	out = append(out, in[prev:])
-	return
 }
