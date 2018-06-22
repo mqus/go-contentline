@@ -1,3 +1,6 @@
+// Package go-contentline provides an Interface for encoding/decoding files formatted using the same syntactic
+// format as vcard and ical files (vcf/ics). The general syntax can be summarized as a structured text file containing
+// ContentLines (which describe parametrized properties) and lines marking the start/end of a component.
 package go_contentline
 
 import (
@@ -5,6 +8,8 @@ import (
 	"io"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/pkg/errors"
 )
 
 // The maximal Length of a resulting line, any more characters will be folded as described below.
@@ -45,6 +50,19 @@ type Property struct {
 
 	//field for remembering the original form before parsing, see Property.OriginalLine()
 	olds string
+}
+
+func NewProperty(name, value string, p Parameters) (out *Property, err error) {
+	r := ValidID(name)
+	if r == nil {
+		return NewPropertyUnchecked(name, value, p), nil
+	} else {
+		return nil, errors.Errorf("Contains at least one illegal character:'%v'", r)
+	}
+}
+
+func NewPropertyUnchecked(name, value string, p Parameters) *Property {
+	return &Property{name, value, p, ""}
 }
 
 //Parameters is a type to represent property parameters as described

@@ -4,17 +4,18 @@
 
 A Parsing backend for parsing ical/vcard streams to a component-tree, Licensed under the MPL v2.0
 
-It will be compliant to RFC 6350 (vCard) ,5545 (iCal) and 6868 (Encoding extensions)
+It is compliant to RFC 6350 (vCard) ,5545 (iCal) and 6868 (Encoding extensions),
+which are the most recent standards(RFCs) concerning the topic.
 
 
-This is currently a WIP.
+This is currently a WIP, but can already be used. The API is pretty much final and working.
 
 ### TODO:
 - [x] complete migration
 - [x] restructure source code
 - [x] CI
 - [ ] Tests
-- [ ] Complete Documentation
+- [x] Complete Documentation
 - [x] implement encoder
 
 - [ ] release

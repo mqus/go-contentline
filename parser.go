@@ -192,7 +192,7 @@ func errorf(line string, i *item, msg string) error {
 	suffix := ""
 
 	pos1 := i.pos
-	pos2 := i.pos + Pos(len(i.val))
+	pos2 := i.pos + pos(len(i.val))
 	if msg == "" {
 		msg = i.val
 		pos2 = pos1 + 1
