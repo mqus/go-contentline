@@ -42,7 +42,8 @@ type Property struct {
 // be iana-registered tokens or have to be prefixed with 'x-'. This will not be checked!
 // The identifiers are case-insensitive and will be converted to uppercase when encoding/parsing.
 // The parameter values can include any utf8-codepoint, as long as they are not control
-// characters (ASCII 0x00 - 0x08,0x0b,0x0c and 0x0e-0x1f)
+// characters (ASCII 0x00 - 0x08,0x0b,0x0c and 0x0e-0x1f), BUT depending on the parameter name a standard could define
+// more constraints (e.g. only a defined set of values for VALUE)
 type Parameters map[string][]string
 
 //OriginalLine returns the unfolded line from the input, before it was parsed.

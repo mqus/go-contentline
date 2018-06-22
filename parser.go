@@ -17,61 +17,8 @@ type Parser struct {
 	l    *lexer
 }
 
-func (p *Parser) readUnfoldedLine() (string, error) {
-	buf, e := p.r.ReadBytes('\n')
-	if e != nil {
-		return "", e
-	}
-
-	if buf[len(buf)-2] != '\r' {
-		return "", errors.Errorf("Expected CRLF:%s, >%v<", buf, buf[len(buf)-2:])
-	}
-	b1, err2 := p.r.Peek(1)
-
-	if err2 != nil {
-		return string(buf[:len(buf)-2]), err2
-	}
-	if bytes.Equal(b1, []byte(" ")) || bytes.Equal(b1, []byte("\t")) {
-		p.r.ReadByte()
-		s, e := p.readUnfoldedLine()
-		if s == "" {
-			return "", e
-		}
-		return string(buf[:len(buf)-2]) + s, e
-	}
-	return string(buf[:len(buf)-2]), nil
-}
-
 func InitParser(reader io.Reader) *Parser {
 	return &Parser{bufio.NewReader(reader), 0, nil}
-}
-
-func (p *Parser) getNextItem() (*item, error) {
-	if p.l == nil {
-		line, err := p.readUnfoldedLine()
-		if line == "" {
-			return nil, err
-		}
-		p.l = lex(p.line, line)
-	}
-	i := p.l.nextItem()
-	switch i.typ {
-	case itemError:
-		e := errorf(p.l.input, &i, "")
-		p.l = nil
-		return nil, e
-	case itemCompName:
-		i.val = strings.ToUpper(i.val)
-		fallthrough
-	case itemPropValue: //the last items of a line
-		p.l = nil
-	case itemId: // make it easier for string matching
-		i.val = strings.ToUpper(i.val)
-	case itemParamValue: // remove escape strings (^^,^n,^N,^')
-		i.val = UnescapeParamVal(i.val)
-	}
-	return &i, nil
-
 }
 
 func (p *Parser) ParseNextObject() (component *Component, err error) {
@@ -85,6 +32,7 @@ func (p *Parser) ParseNextObject() (component *Component, err error) {
 		return nil, errors.Wrap(e, "error while parsing component(s)")
 	}
 }
+
 func (p *Parser) parseObject() (component *Component, err error) {
 	var i *item
 	//checks if the first thing to read is the start of a component
@@ -170,7 +118,60 @@ func (p *Parser) parseProperty(name string) (*Property, error) {
 	return out, nil
 }
 
-const radius = 20
+func (p *Parser) getNextItem() (*item, error) {
+	if p.l == nil {
+		line, err := p.readUnfoldedLine()
+		if line == "" {
+			return nil, err
+		}
+		p.l = lex(p.line, line)
+	}
+	i := p.l.nextItem()
+	switch i.typ {
+	case itemError:
+		e := errorf(p.l.input, &i, "")
+		p.l = nil
+		return nil, e
+	case itemCompName:
+		i.val = strings.ToUpper(i.val)
+		fallthrough
+	case itemPropValue: //the last items of a line
+		p.l = nil
+	case itemId: // make it easier for string matching
+		i.val = strings.ToUpper(i.val)
+	case itemParamValue: // remove escape strings (^^,^n,^N,^')
+		i.val = UnescapeParamVal(i.val)
+	}
+	return &i, nil
+
+}
+
+func (p *Parser) readUnfoldedLine() (string, error) {
+	buf, e := p.r.ReadBytes('\n')
+	if e != nil {
+		return "", e
+	}
+
+	if buf[len(buf)-2] != '\r' {
+		return "", errors.Errorf("Expected CRLF:%s, >%v<", buf, buf[len(buf)-2:])
+	}
+	b1, err2 := p.r.Peek(1)
+
+	if err2 != nil {
+		return string(buf[:len(buf)-2]), err2
+	}
+	if bytes.Equal(b1, []byte(" ")) || bytes.Equal(b1, []byte("\t")) {
+		p.r.ReadByte()
+		s, e := p.readUnfoldedLine()
+		if s == "" {
+			return "", e
+		}
+		return string(buf[:len(buf)-2]) + s, e
+	}
+	return string(buf[:len(buf)-2]), nil
+}
+
+const contentRadius = 20
 
 func errorf(line string, i *item, msg string) error {
 
@@ -184,14 +185,14 @@ func errorf(line string, i *item, msg string) error {
 		pos2 = pos1 + 1
 	}
 
-	if pos1 > radius {
-		prefix = "..." + line[pos1-radius:pos1]
+	if pos1 > contentRadius {
+		prefix = "..." + line[pos1-contentRadius:pos1]
 	} else {
 		prefix = line[0:pos1]
 	}
 
-	if len(line) > radius+int(pos2) {
-		suffix = line[pos1:pos2+radius] + "..."
+	if len(line) > contentRadius+int(pos2) {
+		suffix = line[pos1:pos2+contentRadius] + "..."
 	} else if int(pos1) < len(line) {
 		suffix = line[pos1:]
 	}
