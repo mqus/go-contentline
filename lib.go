@@ -7,29 +7,39 @@ import (
 	"unicode/utf8"
 )
 
+// The maximal Length of a resulting line, any more characters will be folded as described below.
 const foldingLength = 75
 
+//Component is the outermost structured part and can include multiple other Components and has Properties.
+// There are constraints on most Component types concerning which Properties to include and how often. These will not
+// be checked here.
 type Component struct {
 	//Name is the identifying name for this component, e.g. VCARD or VALARM
 	// The component identifiers must be iana-registered tokens or have to be prefixed with 'x-'. This will not be checked!
 	// The identifier is case-insensitive and will be converted to uppercase when encoding/parsing.
 	Name string
+
 	//Properties contains all included Properties.
 	Properties []*Property
+
 	//Comps contains all included Components. For vcf-files, this field should be empty (nil), which will not be checked.
 	Comps []*Component
 }
 
+//Property is the way to include Values into Components. Properties can also have Parameters.
+// E.g. the parameter LANG for DESCRIPTION describes the language in which the description is written.
 type Property struct {
 	//Name is the identifying name for this property, e.g. DESCRIPTION or ROLE
 	// The property identifiers must be iana-registered tokens or have to be prefixed with 'x-'. This will not be checked!
 	// The identifier is case-insensitive and will be converted to uppercase when encoding/parsing.
 	Name string
+
 	//Value is the value for this property, depending on the Name it can have one of multiple types which
 	// includes varying restrictions on the format. The Value will be encoded/parsed as-is, meaning without any
 	// (un-)escaping of newline characters and so on. Therefore this string must not contain any newline
 	// characters (0x0a and 0x0d), as well as any control characters besides HTAB(0x09)
 	Value string
+
 	//Parameters contains the property parameters. For details, see below.
 	Parameters
 

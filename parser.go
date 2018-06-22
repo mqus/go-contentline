@@ -11,18 +11,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+//Parser contains fields describing the state of the parser.
 type Parser struct {
 	r    *bufio.Reader
 	line int //not useful
 	l    *lexer
 }
 
+//InitParser initializes the parser by creating a buffered Reader.
 func InitParser(reader io.Reader) *Parser {
 	return &Parser{bufio.NewReader(reader), 0, nil}
 }
 
+//ParseNextObject parses the next Component and returns it. If the Parser encounters an EOF prematurely,
+// it returns 'nil, io.EOF'. For all other errors, a wrapped error is returned.
 func (p *Parser) ParseNextObject() (component *Component, err error) {
-	c, e := p.parseObject()
+	c, e := p.ParseObject()
 	switch e {
 	case nil:
 		return c, nil
@@ -33,6 +37,8 @@ func (p *Parser) ParseNextObject() (component *Component, err error) {
 	}
 }
 
+//parseObject parses the next Object from the stream, expecting an itemBegin token. This function is wrapped by
+// ParseNextObject for better error messages.
 func (p *Parser) parseObject() (component *Component, err error) {
 	var i *item
 	//checks if the first thing to read is the start of a component
@@ -47,7 +53,7 @@ func (p *Parser) parseObject() (component *Component, err error) {
 	return p.parseComponent()
 }
 
-//BEGIN was already read
+//parseComponent parses the Component for which itemBegin was already read.
 func (p *Parser) parseComponent() (*Component, error) {
 	var i *item
 	var err error
@@ -94,6 +100,7 @@ func (p *Parser) parseComponent() (*Component, error) {
 	return out, nil
 }
 
+//parseProperty parses the next Property while already having parsed the Property name.
 func (p *Parser) parseProperty(name string) (*Property, error) {
 	out := &Property{
 		Name:       name,
@@ -118,6 +125,9 @@ func (p *Parser) parseProperty(name string) (*Property, error) {
 	return out, nil
 }
 
+//getNextItem returns the next lexer item, feeding (unfolded) lines into the lexer if neccessary.
+// It also converts identifiers (itemCompName, itemID) into upper case, errors encountered by the
+// lexer into 'error' values and property parameter values into their original value (without escaped characters).
 func (p *Parser) getNextItem() (*item, error) {
 	if p.l == nil {
 		line, err := p.readUnfoldedLine()
@@ -146,6 +156,7 @@ func (p *Parser) getNextItem() (*item, error) {
 
 }
 
+//readUnfoldedLine reads lines directly from the reader and unfolds them if neccessary.
 func (p *Parser) readUnfoldedLine() (string, error) {
 	buf, e := p.r.ReadBytes('\n')
 	if e != nil {
@@ -171,8 +182,10 @@ func (p *Parser) readUnfoldedLine() (string, error) {
 	return string(buf[:len(buf)-2]), nil
 }
 
+//contentRadius defines the amount of characters which will be displayed around the token causing the error
 const contentRadius = 20
 
+//errorf is a helper function generating pretty error messages for errors thrown py the parser.
 func errorf(line string, i *item, msg string) error {
 
 	prefix := ""
