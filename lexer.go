@@ -234,6 +234,7 @@ func lexCompName(l *lexer) stateFn {
 	}
 	l.acceptRun(parName)
 	if l.peek() != eof {
+		l.ignore()
 		return l.errorf("unexpected character, expected eol, alphanumeric or '-'")
 	}
 	l.emit(itemCompName)
@@ -258,22 +259,17 @@ func lexParamName(l *lexer) stateFn {
 		return l.errorf("name must not be empty")
 	}
 	l.emit(itemId)
-	return lexParamEq
-}
-
-func lexParamEq(l *lexer) stateFn {
 	if l.accept("=") {
 		l.ignore() //l.emit(itemEquals)
-		if l.peek() == '"' {
-			return lexParamQValue
-		} else {
-			return lexParamValue
-		}
+		return lexParamValue
 	}
 	return l.errorf("expected '='")
 }
 
 func lexParamValue(l *lexer) stateFn {
+	if l.accept("\"") {
+		return lexParamQValue
+	}
 	l.acceptRunUnless("\",;:")
 	l.emit(itemParamValue)
 	return lexAfterParamValue
@@ -299,7 +295,7 @@ func lexAfterParamValue(l *lexer) stateFn {
 	}
 	if l.accept(",") {
 		l.ignore() //l.emit(itemComma)
-		return lexAfterParamValue
+		return lexParamValue
 	}
 	return l.errorf("expected ',', ':' or ';'")
 }
