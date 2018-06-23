@@ -7,15 +7,6 @@ A Parsing backend for parsing ical/vcard streams to a component-tree, Licensed u
 It is compliant to RFC 6350 (vCard) ,5545 (iCal) and 6868 (Encoding extensions),
 which are the most recent standards(RFCs) concerning the topic.
 
+See the releases for ready-to-use versions of the library. The version numbering conforms to SemVer.
 
-This is currently a WIP, but can already be used. The API is pretty much final and working.
-
-### TODO:
-- [x] complete migration
-- [x] restructure source code
-- [x] CI
-- [ ] Tests
-- [x] Complete Documentation
-- [x] implement encoder
-
-- [ ] release
+The Documentation can be found on [GoDoc](https://godoc.org/github.com/mqus/go-contentline)
