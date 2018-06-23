@@ -22,10 +22,64 @@ func ExampleComponent_Encode() {
 }
 
 func TestComponent_Encode(t *testing.T) {
+	//test simple component
 	c := &Component{
 		Name: "House",
 	}
 	encodeCompare(t, c, "BEGIN:HOUSE\r\nEND:HOUSE\r\n")
+
+	//test inner component
+	c = &Component{
+		Name: "House",
+		Comps: []*Component{
+			{"Flat", nil, nil},
+		},
+	}
+	encodeCompare(t, c, "BEGIN:HOUSE\r\nBEGIN:FLAT\r\nEND:FLAT\r\nEND:HOUSE\r\n")
+
+	//test Property
+	c = &Component{
+		Name: "House",
+		Properties: []*Property{
+			NewPropertyUnchecked("Heating", "electric", nil),
+		},
+	}
+	encodeCompare(t, c, "BEGIN:HOUSE\r\nHEATING:electric\r\nEND:HOUSE\r\n")
+
+	//test Property with folding, multiple parameter values and escaping
+	c = &Component{
+		Name: "House",
+		Properties: []*Property{
+			NewPropertyUnchecked("Heating", "electric", map[string][]string{"vendor": {"YourGas Co\"", "City:Energy LLC"}, "comment": {"This is a very long comment,more than 2^3 monkeys hat to sit 20 hours to write this \n thing with linebreaks."}}),
+		},
+	}
+	encodeCompare(t, c, "BEGIN:HOUSE\r\n"+
+		"HEATING;"+
+		"VENDOR=YourGas Co^',\"City:Energy LLC\";"+
+		"COMMENT=\"This is a very long \r\n comment,more than 2^^3 monkeys hat to sit 20 hours to write this ^n thing \r\n with linebreaks.\":"+
+		"electric\r\n"+
+		"END:HOUSE\r\n")
+
+	//test Property with folding, multiple parameter values and escaping and inner component and property next to the component.
+	c = &Component{
+		Name: "House",
+		Comps: []*Component{
+			{"Flat", []*Property{
+				NewPropertyUnchecked("Heating2", "electric2", map[string][]string{"vendor": {"YourGas Co\"", "City:Energy LLC"}, "comment": {"This is a very long comment,more than 2^3 monkeys hat to sit 20 hours to write this \n thing with linebreaks."}}),
+			}, nil},
+		},
+		Properties: []*Property{
+			NewPropertyUnchecked("Heating", "electric", map[string][]string{"vendor": {"YourGas Co\"", "City:Energy LLC"}, "comment": {"This is a very long comment,more than 2^3 monkeys hat to sit 20 hours to write this \n thing with linebreaks."}}),
+		},
+	}
+	encodeCompare(t, c, "BEGIN:HOUSE\r\n"+
+		"HEATING;VENDOR=YourGas Co^',\"City:Energy LLC\";"+
+		"COMMENT=\"This is a very long \r\n comment,more than 2^^3 monkeys hat to sit 20 hours to write this ^n thing \r\n with linebreaks.\":electric\r\n"+
+		"BEGIN:FLAT\r\n"+
+		"HEATING2;VENDOR=YourGas Co^',\"City:Energy LLC\";"+
+		"COMMENT=\"This is a very long\r\n  comment,more than 2^^3 monkeys hat to sit 20 hours to write this ^n thing\r\n  with linebreaks.\":electric2\r\n"+
+		"END:FLAT\r\nEND:HOUSE\r\n")
+
 }
 
 func encodeCompare(t *testing.T, in *Component, want string) {
