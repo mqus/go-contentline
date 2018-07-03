@@ -1,18 +1,6 @@
-// Package go-contentline provides an Interface for encoding/decoding files formatted using the same syntactic
-// format as vcard and ical files (vcf/ics). The general syntax can be summarized as a structured text file containing
-// ContentLines (which describe parametrized properties) and lines marking the start/end of a component.
 package go_contentline
 
-import (
-	"fmt"
-	"io"
-	"strings"
-
-	"github.com/pkg/errors"
-)
-
-// The maximal Length of a resulting line, any more characters will be folded as described below.
-const foldingLength = 75
+import "github.com/pkg/errors"
 
 //Component is the outermost structured part and can include multiple other Components and has Properties.
 // There are constraints on most Component types concerning which Properties to include and how often. These will not
@@ -51,6 +39,7 @@ type Property struct {
 	olds string
 }
 
+//NewPropertyUnchecked creates a new Property. The property name is checked for validity, see above.
 func NewProperty(name, value string, p Parameters) (out *Property, err error) {
 	r := ValidID(name)
 	if r == nil {
@@ -60,6 +49,7 @@ func NewProperty(name, value string, p Parameters) (out *Property, err error) {
 	}
 }
 
+//NewPropertyUnchecked creates a new Property, where the property name is not checked for validity
 func NewPropertyUnchecked(name, value string, p Parameters) *Property {
 	return &Property{name, value, p, ""}
 }
@@ -80,54 +70,39 @@ func (p *Property) OriginalLine() string {
 	return p.olds
 }
 
-//Encode encodes the component as described in RFC5545, Section 3.4 and 3.6ff or also RFC6350, Section 6.1.1/6.1.2,
-// including encoding all Properties and writes it to the Writer interface. This writer must be closed by the calling function
-// and is left open for more objects.
-func (c *Component) Encode(w io.Writer) {
-	fmt.Fprintf(w, "%s:%s\r\n", sBEGIN, strings.ToUpper(c.Name))
-	for _, p := range c.Properties {
-		p.Encode(w)
-	}
-	for _, c := range c.Comps {
-		c.Encode(w)
-	}
-
-	fmt.Fprintf(w, "%s:%s\r\n", sEND, strings.ToUpper(c.Name))
+//AddComponent adds one or more Subcomponents
+func (c *Component) AddComponent(subcomps ...*Component) {
+	c.Comps = append(c.Comps, subcomps...)
 }
 
-//Encode encodes the property to a contentline as described in RFC5545, Section 3.1 or also RFC6350, Section 3.3,
-// folds it (if neccessary) and writes it to the Writer interface. This writer must be closed by the calling function
-// and is left open for more objects.
-func (p *Property) Encode(w io.Writer) {
-	out := strings.ToUpper(p.Name)
-	//log.Printf("NoPARAM: %v\n", p.Parameters)
-	for k, vals := range p.Parameters {
-		//log.Println("INPARAM")
-		out = out + ";" + strings.ToUpper(k) + "="
-		for i, v := range vals {
-			if i > 0 {
-				out = out + ","
-			}
-			val := EscapeParamVal(v)
-			if strings.ContainsAny(val, ",;:") {
-				val = "\"" + val + "\""
-			}
-			out = out + val
-		}
-	}
-	out = out + ":" + p.Value
-	writeFolded(w, out)
+//AddProperty adds one or more Properties
+func (c *Component) AddProperty(p ...*Property) {
+	c.Properties = append(c.Properties, p...)
 }
 
-//writeFolded folds the ContentLine (s) as described in RFC5545, Section 3.1 or also RFC6350, Section 3.2
-// and then writes it to the given Writer interface.
-func writeFolded(w io.Writer, s string) {
-	parts := split(s, foldingLength)
-	for i, part := range parts {
-		if i > 0 {
-			fmt.Fprint(w, " ")
+//AddParameter adds one or more Parameter
+func (p *Property) AddParameter(key string, val ...string) {
+	p.Parameters[key] = append(p.Parameters[key], val...)
+}
+
+//find all subcomponents which have the specified name
+func (c *Component) FindSubComponents(name string) []*Component {
+	var out []*Component = nil
+	for _, val := range c.Comps {
+		if val.Name == name {
+			out = append(out, val)
 		}
-		fmt.Fprint(w, part)
-		fmt.Fprint(w, "\r\n")
 	}
+	return out
+}
+
+//find all properties which have the specified name
+func (c *Component) FindProperties(name string) []*Property {
+	var out []*Property = nil
+	for _, val := range c.Properties {
+		if val.Name == name {
+			out = append(out, val)
+		}
+	}
+	return out
 }

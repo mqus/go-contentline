@@ -11,4 +11,4 @@ See the releases for ready-to-use versions of the library. The version numbering
 
 The Documentation can be found on [GoDoc](https://godoc.org/github.com/mqus/go-contentline)
 
-The implemented tests for the endoding functions need strings.Builder from go1.10 (marked with build tags) but everything else builds with a less recent go version.
+The implemented tests for the encoding functions need strings.Builder from go1.10 (marked with build tags) but everything else builds with a less recent go version.
