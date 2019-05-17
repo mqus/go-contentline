@@ -82,6 +82,17 @@ func TestComponent_Encode(t *testing.T) {
 		"COMMENT=\"This is a very long\r\n  comment,more than 2^^3 monkeys hat to sit 20 hours to write this ^n thing\r\n  with linebreaks.\":electric2\r\n"+
 		"END:FLAT\r\nEND:HOUSE\r\n", true)
 
+	//test empty Property
+	c = &Component{
+		Name: "House",
+		Properties: []*Property{
+			NewPropertyUnchecked("Heating", "", map[string][]string{"vendor": {"YourGas Co\"", "City:Energy LLC"}}),
+		},
+	}
+	encodeCompare(t, c, "BEGIN:HOUSE\r\n"+
+		"HEATING;VENDOR=YourGas Co^',\"City:Energy LLC\":\r\n"+
+		"END:HOUSE\r\n", false)
+
 }
 
 func encodeCompare(t *testing.T, in *Component, want string, canSkip bool) {

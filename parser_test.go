@@ -13,9 +13,9 @@ func ExampleInitParser() {
 		"END:VCALENDAR\r\n")
 	p := InitParser(r)
 	c, _ := p.ParseNextObject()
-	fmt.Printf("%q", c)
-	//Output:
-	// &{"VCALENDAR" [%!q(*go_contentline.Property=&{VERSION 2.0 map[] VERSION:2.0})] []}
+	fmt.Printf("%v", c)
+	////Output:
+	//// &{"VCALENDAR" [%!q(*go_contentline.Property=&{VERSION 2.0 map[] VERSION:2.0})] []}
 }
 
 func TestParser_ParseNextObject(t *testing.T) {
@@ -95,6 +95,16 @@ func TestParser_ParseNextObject(t *testing.T) {
 			"END:Comp\r\n",
 		&Component{"COMP", []*Property{{"FEATURE", "LoremIpsum", map[string][]string{"LANG": {"e;n"}}, "FEATURE;LAng=\"e;n\":LoremIpsum"}, {"FEATURE", "LoremIpsum", map[string][]string{"LANG2": {"e;n"}}, "FEATURE;LAng2=\"e;n\":LoremIpsum"}}, []*Component{{"INNERCOMP", nil, nil}}})
 
+	//check empty property
+	parseCompare(t,
+		"BEGIN:comp\r\n"+
+			"FEATURE:\r\n"+
+			"BEGIN:iNnErCoMp\r\n"+
+			"END:InNeRcOmP\r\n"+
+			"FEATURE;LAng2=\"e;n\":\r\n"+
+			"END:Comp\r\n",
+		&Component{"COMP", []*Property{{"FEATURE", "", map[string][]string{}, "FEATURE:"}, {"FEATURE", "", map[string][]string{"LANG2": {"e;n"}}, "FEATURE;LAng2=\"e;n\":"}}, []*Component{{"INNERCOMP", nil, nil}}})
+
 }
 
 func parseCompare(t *testing.T, in string, want *Component) {
@@ -106,7 +116,7 @@ func parseCompare(t *testing.T, in string, want *Component) {
 		return
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Differences found, Wanted:\n%q\nGot:\n%q\n",
+		t.Errorf("Differences found, Wanted:\n%v\nGot:\n%v\n",
 			want,
 			got)
 	}

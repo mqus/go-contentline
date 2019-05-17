@@ -301,9 +301,6 @@ func lexAfterParamValue(l *lexer) stateFn {
 }
 
 func lexValue(l *lexer) stateFn {
-	if l.peek() == eof {
-		return l.errorf("property value can't have length 0")
-	}
 	l.acceptRunUnless("")
 	if l.peek() != eof {
 		return l.errorf("unexpected character, expected eol")
